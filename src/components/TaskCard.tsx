@@ -9,7 +9,7 @@ interface Props {
   onClick: () => void
 }
 
-const PRIORITY_COLOR: Record<string, string> = {
+const PRIORITY_BORDER: Record<string, string> = {
   high: 'var(--priority-high)',
   normal: 'var(--priority-normal)',
   low: 'var(--priority-low)',
@@ -18,6 +18,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 export function TaskCard({ task, index, labels, onClick }: Props) {
   const ds = dueState(task.due_date)
   const dc = dueColor(ds)
+  const borderColor = PRIORITY_BORDER[task.priority] ?? PRIORITY_BORDER.normal
 
   return (
     <Draggable draggableId={task.id} index={index}>
@@ -29,10 +30,12 @@ export function TaskCard({ task, index, labels, onClick }: Props) {
           onClick={onClick}
           className="task-card"
           style={{
-            padding: '12px 14px',
+            position: 'relative',
+            padding: '12px 14px 12px 16px',
             marginBottom: 8,
-            background: 'var(--surface)',
+            background: 'var(--surface-3)',
             border: '1px solid var(--border)',
+            borderLeft: `3px solid ${borderColor}`,
             borderRadius: 'var(--radius)',
             boxShadow: snapshot.isDragging ? 'var(--shadow-lg)' : 'var(--shadow-sm)',
             cursor: 'pointer',
@@ -44,13 +47,11 @@ export function TaskCard({ task, index, labels, onClick }: Props) {
               {labels.map((l) => (
                 <span
                   key={l.id}
+                  className="chip"
                   style={{
-                    fontSize: 11,
-                    fontWeight: 500,
-                    padding: '2px 8px',
-                    borderRadius: 999,
-                    background: l.color,
-                    color: '#fff',
+                    background: hexToTransparent(l.color, 0.18),
+                    color: l.color,
+                    border: `1px solid ${hexToTransparent(l.color, 0.35)}`,
                   }}
                 >
                   {l.name}
@@ -65,6 +66,7 @@ export function TaskCard({ task, index, labels, onClick }: Props) {
               color: 'var(--text)',
               fontSize: 14,
               lineHeight: 1.4,
+              letterSpacing: '-0.005em',
             }}
           >
             {task.title}
@@ -73,7 +75,7 @@ export function TaskCard({ task, index, labels, onClick }: Props) {
           {task.description && (
             <div
               style={{
-                fontSize: 13,
+                fontSize: 12.5,
                 color: 'var(--text-muted)',
                 marginTop: 4,
                 overflow: 'hidden',
@@ -81,60 +83,38 @@ export function TaskCard({ task, index, labels, onClick }: Props) {
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical',
+                lineHeight: 1.45,
               }}
             >
               {task.description}
             </div>
           )}
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              marginTop: 10,
-              flexWrap: 'wrap',
-            }}
-          >
-            <span
-              title={`Priority: ${task.priority}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                fontSize: 11,
-                color: 'var(--text-muted)',
-                textTransform: 'capitalize',
-              }}
-            >
+          {dc && (
+            <div style={{ marginTop: 10 }}>
               <span
+                className="chip"
                 style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: PRIORITY_COLOR[task.priority] ?? PRIORITY_COLOR.normal,
-                }}
-              />
-              {task.priority}
-            </span>
-
-            {dc && (
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 500,
-                  padding: '2px 8px',
-                  borderRadius: 'var(--radius-sm)',
                   background: dc.bg,
                   color: dc.fg,
+                  border: `1px solid ${dc.border}`,
+                  fontWeight: 600,
                 }}
               >
                 {dueLabel(task.due_date)}
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </Draggable>
   )
+}
+
+function hexToTransparent(hex: string, alpha: number): string {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }

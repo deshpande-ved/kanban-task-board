@@ -34,7 +34,7 @@ export function LabelManager({ labels, onCreate, onDelete, onClose }: Props) {
           <button type="submit" style={primaryBtn}>Add label</button>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: 12, color: '#6b6375', marginRight: 4 }}>Color:</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginRight: 4 }}>Color</span>
           {PRESET_COLORS.map((c) => (
             <button
               key={c}
@@ -45,9 +45,12 @@ export function LabelManager({ labels, onCreate, onDelete, onClose }: Props) {
                 height: 24,
                 borderRadius: '50%',
                 background: c,
-                border: color === c ? '2px solid #08060d' : '2px solid transparent',
+                border: color === c ? '2px solid var(--text)' : '2px solid transparent',
+                outline: color === c ? '2px solid var(--bg)' : 'none',
+                outlineOffset: '-4px',
                 cursor: 'pointer',
                 padding: 0,
+                transition: 'transform 80ms ease',
               }}
               aria-label={`Color ${c}`}
             />
@@ -56,7 +59,7 @@ export function LabelManager({ labels, onCreate, onDelete, onClose }: Props) {
       </form>
 
       {labels.length === 0 ? (
-        <div style={{ color: '#9ca3af', fontSize: 13 }}>No labels yet.</div>
+        <div style={{ color: 'var(--text-subtle)', fontSize: 13 }}>No labels yet.</div>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
           {labels.map((l) => (
@@ -66,17 +69,19 @@ export function LabelManager({ labels, onCreate, onDelete, onClose }: Props) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
-                padding: '6px 8px',
-                border: '1px solid #e5e4e7',
-                borderRadius: 6,
+                padding: '8px 10px',
+                background: 'var(--surface-3)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
               }}
             >
               <span style={{ width: 14, height: 14, borderRadius: '50%', background: l.color }} />
-              <span style={{ flex: 1, fontSize: 14 }}>{l.name}</span>
+              <span style={{ flex: 1, fontSize: 14, color: 'var(--text)' }}>{l.name}</span>
               <button
                 type="button"
+                className="btn btn-danger"
                 onClick={() => onDelete(l.id)}
-                style={{ ...secondaryBtn, fontSize: 12, padding: '4px 8px' }}
+                style={{ fontSize: 12, padding: '4px 10px' }}
               >
                 Delete
               </button>
@@ -103,7 +108,8 @@ export function ModalShell({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.4)',
+        background: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -113,7 +119,8 @@ export function ModalShell({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'var(--surface)',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border)',
           borderRadius: 'var(--radius-lg)',
           width: '100%',
           maxWidth: 520,
@@ -124,8 +131,8 @@ export function ModalShell({
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.01em' }}>{title}</h2>
-          <button type="button" onClick={onClose} style={{ ...secondaryBtn, padding: '4px 10px' }}>
-            Close
+          <button type="button" onClick={onClose} className="btn btn-ghost" style={{ padding: '4px 10px' }}>
+            ✕
           </button>
         </div>
         {children}
@@ -140,7 +147,7 @@ const inputStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
   borderRadius: 'var(--radius)',
   fontSize: 14,
-  background: 'var(--surface)',
+  background: 'var(--surface-3)',
   color: 'var(--text)',
 }
 
@@ -151,18 +158,18 @@ const primaryBtn: React.CSSProperties = {
   border: 'none',
   borderRadius: 'var(--radius)',
   cursor: 'pointer',
-  fontSize: 14,
+  fontSize: 13,
   fontWeight: 500,
 }
 
 const secondaryBtn: React.CSSProperties = {
   padding: '6px 12px',
-  background: 'var(--surface)',
+  background: 'var(--surface-3)',
   color: 'var(--text)',
   border: '1px solid var(--border)',
   borderRadius: 'var(--radius)',
   cursor: 'pointer',
-  fontSize: 14,
+  fontSize: 13,
   fontWeight: 500,
 }
 

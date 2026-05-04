@@ -25,16 +25,34 @@ export function dueLabel(dueDate: string | null): string {
   return due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-export function dueColor(state: DueState): { bg: string; fg: string } | null {
+export function dueColor(
+  state: DueState,
+): { bg: string; fg: string; border: string } | null {
   switch (state) {
     case 'overdue':
-      return { bg: '#fef2f2', fg: '#dc2626' }
+      return {
+        bg: 'rgba(239, 68, 68, 0.15)',
+        fg: '#fca5a5',
+        border: 'rgba(239, 68, 68, 0.35)',
+      }
     case 'today':
-      return { bg: '#fff7ed', fg: '#c2410c' }
+      return {
+        bg: 'rgba(249, 115, 22, 0.15)',
+        fg: '#fdba74',
+        border: 'rgba(249, 115, 22, 0.35)',
+      }
     case 'soon':
-      return { bg: '#fefce8', fg: '#a16207' }
+      return {
+        bg: 'rgba(234, 179, 8, 0.12)',
+        fg: '#fde68a',
+        border: 'rgba(234, 179, 8, 0.3)',
+      }
     case 'later':
-      return { bg: '#f4f4f5', fg: '#52525b' }
+      return {
+        bg: 'rgba(161, 161, 170, 0.12)',
+        fg: '#d4d4d8',
+        border: 'rgba(161, 161, 170, 0.25)',
+      }
     default:
       return null
   }

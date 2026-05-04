@@ -2,10 +2,11 @@ import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
 import { useMemo, useState } from 'react'
 import { useLabels } from '../hooks/useLabels'
 import { useTasks } from '../hooks/useTasks'
-import type { Task, TaskStatus } from '../types/database'
+import type { Task, TaskPriority, TaskStatus } from '../types/database'
 import { Column } from './Column'
 import { LabelManager } from './LabelManager'
-import { EMPTY_FILTERS, SearchBar, type Filters } from './SearchBar'
+import { EMPTY_FILTERS, type Filters } from './SearchBar'
+import { Sidebar } from './Sidebar'
 import { TaskModal } from './TaskModal'
 
 const COLUMNS: { status: TaskStatus; title: string }[] = [
@@ -103,90 +104,108 @@ export function Board({ userId }: Props) {
   }
 
   return (
-    <div style={{ padding: '24px 24px 48px', maxWidth: 1400, margin: '0 auto' }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 20,
-          flexWrap: 'wrap',
-          gap: 12,
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 600,
-              margin: 0,
-              color: 'var(--text)',
-              letterSpacing: '-0.01em',
-            }}
-          >
-            Kanban
-          </h1>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-            {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+    <div className="shell">
+      <Sidebar
+        tasks={tasks}
+        labels={labels}
+        filters={filters}
+        onFiltersChange={setFilters}
+        onManageLabels={() => setModal({ kind: 'labels' })}
+      />
+
+      <div className="main">
+        <header className="main-header">
+          <div style={{ flex: '1 1 280px', minWidth: 200, maxWidth: 480 }}>
+            <input
+              value={filters.query}
+              onChange={(e) => setFilters({ ...filters, query: e.target.value })}
+              placeholder="Search tasks…"
+              className="input"
+            />
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setModal({ kind: 'labels' })}
-          >
-            Labels
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setModal({ kind: 'create' })}
-          >
-            + New task
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <select
+              value={filters.priority}
+              onChange={(e) =>
+                setFilters({ ...filters, priority: e.target.value as TaskPriority | 'all' })
+              }
+              className="input"
+              style={{ width: 'auto' }}
+            >
+              <option value="all">All priorities</option>
+              <option value="high">High</option>
+              <option value="normal">Normal</option>
+              <option value="low">Low</option>
+            </select>
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={() => setFilters(EMPTY_FILTERS)}
+                className="btn btn-ghost"
+              >
+                Clear
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setModal({ kind: 'create' })}
+            >
+              + New task
+            </button>
+          </div>
+        </header>
+
+        <div className="main-content">
+          {tasksError && (
+            <div
+              style={{
+                background: 'rgba(239, 68, 68, 0.12)',
+                color: '#fca5a5',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                borderRadius: 'var(--radius)',
+                padding: '10px 14px',
+                marginBottom: 12,
+                fontSize: 13,
+              }}
+            >
+              {tasksError.message}
+            </div>
+          )}
+
+          {filtersActive && (
+            <div
+              style={{
+                fontSize: 12,
+                color: 'var(--text-muted)',
+                marginBottom: 12,
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                padding: '8px 12px',
+              }}
+            >
+              Showing {totalVisible} of {tasks.length} tasks · drag-and-drop is paused while
+              filters are active
+            </div>
+          )}
+
+          <DragDropContext onDragEnd={onDragEnd}>
+            <div className="board-row" style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
+              {COLUMNS.map((c) => (
+                <Column
+                  key={c.status}
+                  status={c.status}
+                  title={c.title}
+                  tasks={filteredGrouped[c.status]}
+                  labelsForTask={labelsForTask}
+                  onTaskClick={(task) => setModal({ kind: 'edit', task })}
+                />
+              ))}
+            </div>
+          </DragDropContext>
         </div>
       </div>
-
-      {tasksError && (
-        <div
-          style={{
-            background: '#fef2f2',
-            color: 'var(--danger)',
-            border: '1px solid #fecaca',
-            borderRadius: 'var(--radius)',
-            padding: '8px 12px',
-            marginBottom: 12,
-            fontSize: 13,
-          }}
-        >
-          {tasksError.message}
-        </div>
-      )}
-
-      <SearchBar filters={filters} labels={labels} onChange={setFilters} />
-
-      {filtersActive && (
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-          Showing {totalVisible} of {tasks.length} tasks · drag-and-drop is paused while filters
-          are active
-        </div>
-      )}
-
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div className="board-row" style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
-          {COLUMNS.map((c) => (
-            <Column
-              key={c.status}
-              status={c.status}
-              title={c.title}
-              tasks={filteredGrouped[c.status]}
-              labelsForTask={labelsForTask}
-              onTaskClick={(task) => setModal({ kind: 'edit', task })}
-            />
-          ))}
-        </div>
-      </DragDropContext>
 
       {modal.kind === 'create' && (
         <TaskModal
@@ -246,27 +265,39 @@ export function Board({ userId }: Props) {
 
 function BoardSkeleton() {
   return (
-    <div style={{ padding: 24, maxWidth: 1400, margin: '0 auto' }}>
-      <div className="skeleton" style={{ width: 140, height: 26, marginBottom: 24 }} />
-      <div style={{ display: 'flex', gap: 12 }}>
-        {[0, 1, 2, 3].map((i) => (
-          <div
-            key={i}
-            style={{
-              flex: 1,
-              minWidth: 240,
-              background: 'var(--surface-2)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-lg)',
-              padding: 12,
-              minHeight: 400,
-            }}
-          >
-            <div className="skeleton" style={{ width: 80, height: 14, marginBottom: 12 }} />
-            <div className="skeleton" style={{ height: 60, marginBottom: 8 }} />
-            <div className="skeleton" style={{ height: 60, marginBottom: 8 }} />
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="skeleton" style={{ width: 100, height: 26, marginBottom: 18 }} />
+        <div className="skeleton" style={{ height: 64, marginBottom: 12 }} />
+        <div className="skeleton" style={{ height: 64 }} />
+      </aside>
+      <div className="main">
+        <header className="main-header">
+          <div className="skeleton" style={{ width: 240, height: 32 }} />
+          <div className="skeleton" style={{ width: 100, height: 32 }} />
+        </header>
+        <div className="main-content">
+          <div style={{ display: 'flex', gap: 12 }}>
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                style={{
+                  flex: 1,
+                  minWidth: 240,
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: 12,
+                  minHeight: 400,
+                }}
+              >
+                <div className="skeleton" style={{ width: 80, height: 14, marginBottom: 12 }} />
+                <div className="skeleton" style={{ height: 60, marginBottom: 8 }} />
+                <div className="skeleton" style={{ height: 60, marginBottom: 8 }} />
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
     </div>
   )

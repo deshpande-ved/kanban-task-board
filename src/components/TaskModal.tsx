@@ -118,8 +118,16 @@ export function TaskModal({
 
         <Field label="Labels">
           {labels.length === 0 ? (
-            <div style={{ fontSize: 13, color: '#9ca3af' }}>
-              No labels yet — create some from the Labels button.
+            <div
+              style={{
+                fontSize: 13,
+                color: 'var(--text-subtle)',
+                fontWeight: 400,
+                textTransform: 'none',
+                letterSpacing: 0,
+              }}
+            >
+              No labels yet — manage them from the sidebar.
             </div>
           ) : (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -136,11 +144,15 @@ export function TaskModal({
                       gap: 6,
                       padding: '4px 10px',
                       borderRadius: 999,
-                      border: `1px solid ${active ? l.color : '#e5e4e7'}`,
-                      background: active ? l.color : '#fff',
-                      color: active ? '#fff' : '#08060d',
+                      border: `1px solid ${active ? l.color : 'var(--border)'}`,
+                      background: active ? l.color : 'var(--surface-3)',
+                      color: active ? '#fff' : 'var(--text)',
                       fontSize: 12,
+                      fontWeight: 500,
+                      letterSpacing: 0,
+                      textTransform: 'none',
                       cursor: 'pointer',
+                      transition: 'background 140ms, border-color 140ms',
                     }}
                   >
                     <span
@@ -192,7 +204,19 @@ export function TaskModal({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, fontSize: 13, color: '#6b6375' }}>
+    <label
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 5,
+        flex: 1,
+        fontSize: 11,
+        fontWeight: 600,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        color: 'var(--text-subtle)',
+      }}
+    >
       {label}
       {children}
     </label>
