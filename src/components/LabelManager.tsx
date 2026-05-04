@@ -113,16 +113,17 @@ export function ModalShell({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#fff',
-          borderRadius: 10,
+          background: 'var(--surface)',
+          borderRadius: 'var(--radius-lg)',
           width: '100%',
-          maxWidth: 480,
-          padding: 20,
-          boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
+          maxWidth: 520,
+          padding: 22,
+          boxShadow: 'var(--shadow-lg)',
+          margin: 16,
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <h2 style={{ margin: 0, fontSize: 18, color: '#08060d' }}>{title}</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.01em' }}>{title}</h2>
           <button type="button" onClick={onClose} style={{ ...secondaryBtn, padding: '4px 10px' }}>
             Close
           </button>
@@ -136,29 +137,33 @@ export function ModalShell({
 const inputStyle: React.CSSProperties = {
   flex: 1,
   padding: '8px 12px',
-  border: '1px solid #e5e4e7',
-  borderRadius: 6,
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius)',
   fontSize: 14,
+  background: 'var(--surface)',
+  color: 'var(--text)',
 }
 
 const primaryBtn: React.CSSProperties = {
   padding: '8px 16px',
-  background: '#aa3bff',
+  background: 'var(--accent)',
   color: '#fff',
   border: 'none',
-  borderRadius: 6,
+  borderRadius: 'var(--radius)',
   cursor: 'pointer',
   fontSize: 14,
+  fontWeight: 500,
 }
 
 const secondaryBtn: React.CSSProperties = {
   padding: '6px 12px',
-  background: '#fff',
-  color: '#08060d',
-  border: '1px solid #e5e4e7',
-  borderRadius: 6,
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius)',
   cursor: 'pointer',
   fontSize: 14,
+  fontWeight: 500,
 }
 
 export { inputStyle, primaryBtn, secondaryBtn }

@@ -112,11 +112,12 @@ export function useTasks(userId: string | undefined) {
           : tasks.filter((t) => t.status === destStatus).sort((a, b) => a.position - b.position)
 
       const destCol = [...destColBase]
-      destCol.splice(destIndex, 0, { ...moving, status: destStatus })
+      destCol.splice(destIndex, 0, moving)
 
       const updates: { id: string; status: TaskStatus; position: number }[] = []
       destCol.forEach((t, i) => {
-        if (t.position !== i || t.status !== destStatus) {
+        const isMoving = t.id === taskId
+        if (isMoving || t.position !== i || t.status !== destStatus) {
           updates.push({ id: t.id, status: destStatus, position: i })
         }
       })
