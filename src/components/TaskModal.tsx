@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { Label, Task, TaskPriority, TaskStatus } from '../types/database'
-import { ModalShell, inputStyle, primaryBtn, secondaryBtn } from './LabelManager'
+import { Modal } from './Modal'
 
 interface Props {
   mode: 'create' | 'edit'
@@ -28,20 +28,20 @@ export function TaskModal({
   onSubmit,
   onDelete,
 }: Props) {
-  const [title, setTitle] = useState(task?.title ?? '')
-  const [description, setDescription] = useState(task?.description ?? '')
-  const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? 'normal')
-  const [dueDate, setDueDate] = useState<string>(task?.due_date ?? '')
-  const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'todo')
+  const [title, setTitle] = useState(task?.title || '')
+  const [description, setDescription] = useState(task?.description || '')
+  const [priority, setPriority] = useState<TaskPriority>(task?.priority || 'normal')
+  const [dueDate, setDueDate] = useState(task?.due_date || '')
+  const [status, setStatus] = useState<TaskStatus>(task?.status || 'todo')
   const [labelIds, setLabelIds] = useState<string[]>(initialLabelIds)
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
-    setLabelIds(initialLabelIds)
-  }, [initialLabelIds])
-
   function toggleLabel(id: string) {
-    setLabelIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+    if (labelIds.includes(id)) {
+      setLabelIds(labelIds.filter((x) => x !== id))
+    } else {
+      setLabelIds([...labelIds, id])
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -61,7 +61,7 @@ export function TaskModal({
   }
 
   return (
-    <ModalShell title={mode === 'create' ? 'New task' : 'Edit task'} onClose={onClose}>
+    <Modal title={mode === 'create' ? 'New task' : 'Edit task'} onClose={onClose}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Field label="Title">
           <input
@@ -69,7 +69,7 @@ export function TaskModal({
             onChange={(e) => setTitle(e.target.value)}
             required
             autoFocus
-            style={inputStyle}
+            className="input"
           />
         </Field>
 
@@ -78,7 +78,8 @@ export function TaskModal({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+            className="input"
+            style={{ resize: 'vertical' }}
           />
         </Field>
 
@@ -87,7 +88,7 @@ export function TaskModal({
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as TaskStatus)}
-              style={inputStyle}
+              className="input"
             >
               <option value="todo">To Do</option>
               <option value="in_progress">In Progress</option>
@@ -99,7 +100,7 @@ export function TaskModal({
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              style={inputStyle}
+              className="input"
             >
               <option value="low">Low</option>
               <option value="normal">Normal</option>
@@ -111,23 +112,15 @@ export function TaskModal({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              style={inputStyle}
+              className="input"
             />
           </Field>
         </div>
 
         <Field label="Labels">
           {labels.length === 0 ? (
-            <div
-              style={{
-                fontSize: 13,
-                color: 'var(--text-subtle)',
-                fontWeight: 400,
-                textTransform: 'none',
-                letterSpacing: 0,
-              }}
-            >
-              No labels yet — manage them from the sidebar.
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              No labels yet. Use the sidebar to create some.
             </div>
           ) : (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -144,15 +137,11 @@ export function TaskModal({
                       gap: 6,
                       padding: '4px 10px',
                       borderRadius: 999,
-                      border: `1px solid ${active ? l.color : 'var(--border)'}`,
+                      border: '1px solid ' + (active ? l.color : 'var(--border)'),
                       background: active ? l.color : 'var(--surface-3)',
-                      color: active ? '#fff' : 'var(--text)',
+                      color: active ? 'white' : 'var(--text)',
                       fontSize: 12,
-                      fontWeight: 500,
-                      letterSpacing: 0,
-                      textTransform: 'none',
                       cursor: 'pointer',
-                      transition: 'background 140ms, border-color 140ms',
                     }}
                   >
                     <span
@@ -160,7 +149,7 @@ export function TaskModal({
                         width: 8,
                         height: 8,
                         borderRadius: '50%',
-                        background: active ? '#fff' : l.color,
+                        background: active ? 'white' : l.color,
                       }}
                     />
                     {l.name}
@@ -171,7 +160,13 @@ export function TaskModal({
           )}
         </Field>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: 8,
+          }}
+        >
           <div>
             {mode === 'edit' && onDelete && (
               <button
@@ -182,23 +177,24 @@ export function TaskModal({
                     onClose()
                   }
                 }}
-                style={{ ...secondaryBtn, color: '#b91c1c', borderColor: '#fca5a5' }}
+                className="btn btn-secondary"
+                style={{ color: 'var(--danger)' }}
               >
                 Delete
               </button>
             )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={onClose} style={secondaryBtn}>
+            <button type="button" onClick={onClose} className="btn btn-secondary">
               Cancel
             </button>
-            <button type="submit" disabled={submitting} style={primaryBtn}>
-              {submitting ? 'Saving…' : mode === 'create' ? 'Create' : 'Save'}
+            <button type="submit" disabled={submitting} className="btn btn-primary">
+              {submitting ? 'Saving...' : mode === 'create' ? 'Create' : 'Save'}
             </button>
           </div>
         </div>
       </form>
-    </ModalShell>
+    </Modal>
   )
 }
 
@@ -208,13 +204,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 5,
+        gap: 4,
         flex: 1,
-        fontSize: 11,
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-        color: 'var(--text-subtle)',
+        fontSize: 13,
+        color: 'var(--text-muted)',
       }}
     >
       {label}

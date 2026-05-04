@@ -1,5 +1,5 @@
 import { Draggable } from '@hello-pangea/dnd'
-import { dueColor, dueLabel, dueState } from '../lib/dueDate'
+import { getDueLabel, getDueState } from '../lib/dueDate'
 import type { Label, Task } from '../types/database'
 
 interface Props {
@@ -9,16 +9,33 @@ interface Props {
   onClick: () => void
 }
 
-const PRIORITY_BORDER: Record<string, string> = {
-  high: 'var(--priority-high)',
-  normal: 'var(--priority-normal)',
-  low: 'var(--priority-low)',
+// Priority shows up as a colored left border on the card
+function priorityColor(priority: string) {
+  if (priority === 'high') return '#ef4444'
+  if (priority === 'low') return '#22c55e'
+  return '#eab308'
+}
+
+// Style the due-date badge based on how urgent it is
+function dueBadgeStyle(dueDate: string | null) {
+  const state = getDueState(dueDate)
+  if (state === 'overdue') {
+    return { background: 'rgba(239, 68, 68, 0.15)', color: '#fca5a5' }
+  }
+  if (state === 'today') {
+    return { background: 'rgba(249, 115, 22, 0.15)', color: '#fdba74' }
+  }
+  if (state === 'soon') {
+    return { background: 'rgba(234, 179, 8, 0.12)', color: '#fde68a' }
+  }
+  if (state === 'later') {
+    return { background: 'rgba(161, 161, 170, 0.12)', color: '#d4d4d8' }
+  }
+  return null
 }
 
 export function TaskCard({ task, index, labels, onClick }: Props) {
-  const ds = dueState(task.due_date)
-  const dc = dueColor(ds)
-  const borderColor = PRIORITY_BORDER[task.priority] ?? PRIORITY_BORDER.normal
+  const badgeStyle = dueBadgeStyle(task.due_date)
 
   return (
     <Draggable draggableId={task.id} index={index}>
@@ -30,15 +47,14 @@ export function TaskCard({ task, index, labels, onClick }: Props) {
           onClick={onClick}
           className="task-card"
           style={{
-            position: 'relative',
             padding: '12px 14px 12px 16px',
             marginBottom: 8,
             background: 'var(--surface-3)',
             border: '1px solid var(--border)',
-            borderLeft: `3px solid ${borderColor}`,
-            borderRadius: 'var(--radius)',
-            boxShadow: snapshot.isDragging ? 'var(--shadow-lg)' : 'var(--shadow-sm)',
+            borderLeft: '3px solid ' + priorityColor(task.priority),
+            borderRadius: 8,
             cursor: 'pointer',
+            boxShadow: snapshot.isDragging ? '0 6px 16px rgba(0, 0, 0, 0.4)' : 'none',
             ...provided.draggableProps.style,
           }}
         >
@@ -47,11 +63,13 @@ export function TaskCard({ task, index, labels, onClick }: Props) {
               {labels.map((l) => (
                 <span
                   key={l.id}
-                  className="chip"
                   style={{
-                    background: hexToTransparent(l.color, 0.18),
-                    color: l.color,
-                    border: `1px solid ${hexToTransparent(l.color, 0.35)}`,
+                    fontSize: 11,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    background: l.color,
+                    color: 'white',
+                    fontWeight: 500,
                   }}
                 >
                   {l.name}
@@ -60,17 +78,7 @@ export function TaskCard({ task, index, labels, onClick }: Props) {
             </div>
           )}
 
-          <div
-            style={{
-              fontWeight: 500,
-              color: 'var(--text)',
-              fontSize: 14,
-              lineHeight: 1.4,
-              letterSpacing: '-0.005em',
-            }}
-          >
-            {task.title}
-          </div>
+          <div style={{ fontWeight: 500, fontSize: 14, color: 'var(--text)' }}>{task.title}</div>
 
           {task.description && (
             <div
@@ -83,25 +91,24 @@ export function TaskCard({ task, index, labels, onClick }: Props) {
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical',
-                lineHeight: 1.45,
               }}
             >
               {task.description}
             </div>
           )}
 
-          {dc && (
+          {badgeStyle && (
             <div style={{ marginTop: 10 }}>
               <span
-                className="chip"
                 style={{
-                  background: dc.bg,
-                  color: dc.fg,
-                  border: `1px solid ${dc.border}`,
-                  fontWeight: 600,
+                  fontSize: 11,
+                  padding: '2px 8px',
+                  borderRadius: 4,
+                  fontWeight: 500,
+                  ...badgeStyle,
                 }}
               >
-                {dueLabel(task.due_date)}
+                {getDueLabel(task.due_date)}
               </span>
             </div>
           )}
@@ -109,12 +116,4 @@ export function TaskCard({ task, index, labels, onClick }: Props) {
       )}
     </Draggable>
   )
-}
-
-function hexToTransparent(hex: string, alpha: number): string {
-  const h = hex.replace('#', '')
-  const r = parseInt(h.substring(0, 2), 16)
-  const g = parseInt(h.substring(2, 4), 16)
-  const b = parseInt(h.substring(4, 6), 16)
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }

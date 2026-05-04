@@ -13,10 +13,9 @@ function App() {
           alignItems: 'center',
           justifyContent: 'center',
           color: 'var(--text-muted)',
-          fontSize: 14,
         }}
       >
-        Signing in…
+        Signing in...
       </div>
     )
   }
@@ -29,17 +28,12 @@ function App() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flexDirection: 'column',
-          gap: 8,
           color: 'var(--danger)',
           padding: 24,
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 600 }}>Couldn't sign in</div>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          {error?.message ?? 'No user session.'}
-        </div>
+        Could not sign in: {error || 'no user'}
       </div>
     )
   }

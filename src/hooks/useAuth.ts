@@ -2,51 +2,34 @@ import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
+// Sign the user in anonymously if they don't have a session yet.
+// Each anonymous user gets their own row in auth.users.
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
+    async function signIn() {
+      const sessionResult = await supabase.auth.getSession()
+      const session = sessionResult.data.session
 
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (session?.user) {
-        if (!cancelled) {
-          setUser(session.user)
-          setLoading(false)
-        }
+      if (session) {
+        setUser(session.user)
+        setLoading(false)
         return
       }
 
-      const { data, error: signInError } = await supabase.auth.signInAnonymously()
-      if (cancelled) return
-
-      if (signInError) {
-        setError(signInError)
+      const { data, error } = await supabase.auth.signInAnonymously()
+      if (error) {
+        setError(error.message)
       } else {
-        setUser(data.user ?? null)
+        setUser(data.user)
       }
       setLoading(false)
     }
 
-    init().catch((e) => {
-      if (!cancelled) {
-        setError(e instanceof Error ? e : new Error(String(e)))
-        setLoading(false)
-      }
-    })
-
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => {
-      cancelled = true
-      subscription.subscription.unsubscribe()
-    }
+    signIn()
   }, [])
 
   return { user, loading, error }

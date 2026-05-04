@@ -1,157 +1,132 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { NewTask, Task, TaskStatus, TaskUpdate } from '../types/database'
+import type { Task, TaskPriority, TaskStatus } from '../types/database'
 
-const STATUSES: TaskStatus[] = ['todo', 'in_progress', 'in_review', 'done']
-
-export type TasksByStatus = Record<TaskStatus, Task[]>
-
-function groupByStatus(tasks: Task[]): TasksByStatus {
-  const grouped: TasksByStatus = {
-    todo: [],
-    in_progress: [],
-    in_review: [],
-    done: [],
-  }
-  for (const t of tasks) grouped[t.status].push(t)
-  for (const s of STATUSES) grouped[s].sort((a, b) => a.position - b.position)
-  return grouped
+interface NewTaskInput {
+  title: string
+  description?: string
+  status?: TaskStatus
+  priority?: TaskPriority
+  due_date?: string | null
 }
 
 export function useTasks(userId: string | undefined) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    if (!userId) return
-    setLoading(true)
+  async function loadTasks() {
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
       .order('position', { ascending: true })
-    if (error) setError(error)
-    else setTasks(data ?? [])
+    if (error) {
+      setError(error.message)
+    } else {
+      setTasks(data || [])
+    }
     setLoading(false)
-  }, [userId])
+  }
 
   useEffect(() => {
-    if (!userId) return
-    load()
-  }, [userId, load])
+    if (userId) {
+      loadTasks()
+    }
+  }, [userId])
 
-  const grouped = useMemo(() => groupByStatus(tasks), [tasks])
+  // Group tasks by their status column
+  const grouped = {
+    todo: tasks.filter((t) => t.status === 'todo').sort((a, b) => a.position - b.position),
+    in_progress: tasks
+      .filter((t) => t.status === 'in_progress')
+      .sort((a, b) => a.position - b.position),
+    in_review: tasks
+      .filter((t) => t.status === 'in_review')
+      .sort((a, b) => a.position - b.position),
+    done: tasks.filter((t) => t.status === 'done').sort((a, b) => a.position - b.position),
+  }
 
-  const createTask = useCallback(
-    async (input: Partial<NewTask> & { title: string }) => {
-      const status = input.status ?? 'todo'
-      const positionsInColumn = tasks.filter((t) => t.status === status).map((t) => t.position)
-      const nextPosition = positionsInColumn.length
-        ? Math.max(...positionsInColumn) + 1
-        : 0
-      const payload = {
-        title: input.title,
-        description: input.description ?? '',
-        status,
-        priority: input.priority ?? 'normal',
-        due_date: input.due_date ?? null,
-        position: input.position ?? nextPosition,
-      }
-      const { data, error } = await supabase.from('tasks').insert(payload).select().single()
-      if (error) {
-        setError(error)
-        return null
-      }
-      setTasks((prev) => [...prev, data as Task])
-      return data as Task
-    },
-    [tasks],
-  )
+  async function createTask(input: NewTaskInput) {
+    const status = input.status || 'todo'
+    const tasksInColumn = tasks.filter((t) => t.status === status)
+    const nextPosition = tasksInColumn.length
 
-  const updateTask = useCallback(async (id: string, patch: TaskUpdate) => {
     const { data, error } = await supabase
       .from('tasks')
-      .update(patch)
-      .eq('id', id)
+      .insert({
+        title: input.title,
+        description: input.description || '',
+        status,
+        priority: input.priority || 'normal',
+        due_date: input.due_date || null,
+        position: nextPosition,
+      })
       .select()
       .single()
+
     if (error) {
-      setError(error)
+      setError(error.message)
       return null
     }
-    setTasks((prev) => prev.map((t) => (t.id === id ? (data as Task) : t)))
+    await loadTasks()
     return data as Task
-  }, [])
+  }
 
-  const deleteTask = useCallback(async (id: string) => {
+  async function updateTask(id: string, patch: Partial<Task>) {
+    const { error } = await supabase.from('tasks').update(patch).eq('id', id)
+    if (error) setError(error.message)
+    await loadTasks()
+  }
+
+  async function deleteTask(id: string) {
     const { error } = await supabase.from('tasks').delete().eq('id', id)
-    if (error) {
-      setError(error)
-      return false
+    if (error) setError(error.message)
+    await loadTasks()
+  }
+
+  // Move a task to a new column and/or position.
+  // Recomputes positions in both source and destination columns.
+  async function moveTask(
+    taskId: string,
+    sourceStatus: TaskStatus,
+    destStatus: TaskStatus,
+    destIndex: number,
+  ) {
+    const moving = tasks.find((t) => t.id === taskId)
+    if (!moving) return
+
+    // Build the new ordering for the destination column
+    const destTasks = tasks
+      .filter((t) => t.status === destStatus && t.id !== taskId)
+      .sort((a, b) => a.position - b.position)
+    destTasks.splice(destIndex, 0, moving)
+
+    // Update each task's position to its new index
+    for (let i = 0; i < destTasks.length; i++) {
+      await supabase
+        .from('tasks')
+        .update({ status: destStatus, position: i })
+        .eq('id', destTasks[i].id)
     }
-    setTasks((prev) => prev.filter((t) => t.id !== id))
-    return true
-  }, [])
 
-  const moveTask = useCallback(
-    async (
-      taskId: string,
-      sourceStatus: TaskStatus,
-      destStatus: TaskStatus,
-      destIndex: number,
-    ) => {
-      const moving = tasks.find((t) => t.id === taskId)
-      if (!moving) return
-
-      const sourceCol = tasks
+    // If we moved between columns, also re-pack the source column
+    if (sourceStatus !== destStatus) {
+      const sourceTasks = tasks
         .filter((t) => t.status === sourceStatus && t.id !== taskId)
         .sort((a, b) => a.position - b.position)
-      const destColBase =
-        sourceStatus === destStatus
-          ? sourceCol
-          : tasks.filter((t) => t.status === destStatus).sort((a, b) => a.position - b.position)
-
-      const destCol = [...destColBase]
-      destCol.splice(destIndex, 0, moving)
-
-      const updates: { id: string; status: TaskStatus; position: number }[] = []
-      destCol.forEach((t, i) => {
-        const isMoving = t.id === taskId
-        if (isMoving || t.position !== i || t.status !== destStatus) {
-          updates.push({ id: t.id, status: destStatus, position: i })
-        }
-      })
-      if (sourceStatus !== destStatus) {
-        sourceCol.forEach((t, i) => {
-          if (t.position !== i) updates.push({ id: t.id, status: sourceStatus, position: i })
-        })
+      for (let i = 0; i < sourceTasks.length; i++) {
+        await supabase.from('tasks').update({ position: i }).eq('id', sourceTasks[i].id)
       }
+    }
 
-      setTasks((prev) =>
-        prev.map((t) => {
-          const u = updates.find((x) => x.id === t.id)
-          return u ? { ...t, status: u.status, position: u.position } : t
-        }),
-      )
-
-      await Promise.all(
-        updates.map((u) =>
-          supabase
-            .from('tasks')
-            .update({ status: u.status, position: u.position })
-            .eq('id', u.id),
-        ),
-      )
-    },
-    [tasks],
-  )
+    await loadTasks()
+  }
 
   return {
     tasks,
     grouped,
     loading,
     error,
-    reload: load,
     createTask,
     updateTask,
     deleteTask,

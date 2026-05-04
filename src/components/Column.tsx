@@ -10,15 +10,16 @@ interface Props {
   onTaskClick: (task: Task) => void
 }
 
-const STATUS_COLOR: Record<TaskStatus, string> = {
-  todo: 'var(--status-todo)',
-  in_progress: 'var(--status-in-progress)',
-  in_review: 'var(--status-in-review)',
-  done: 'var(--status-done)',
+function statusColor(status: TaskStatus) {
+  if (status === 'todo') return '#a1a1aa'
+  if (status === 'in_progress') return '#6366f1'
+  if (status === 'in_review') return '#eab308'
+  return '#22c55e'
 }
 
 export function Column({ status, title, tasks, labelsForTask, onTaskClick }: Props) {
-  const accent = STATUS_COLOR[status]
+  const accent = statusColor(status)
+
   return (
     <div
       className="board-column"
@@ -26,69 +27,39 @@ export function Column({ status, title, tasks, labelsForTask, onTaskClick }: Pro
         flex: 1,
         minWidth: 280,
         background: 'var(--surface-2)',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 10,
         border: '1px solid var(--border)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
       }}
     >
-      <div
-        style={{
-          height: 3,
-          background: accent,
-          opacity: 0.85,
-        }}
-      />
-      <div style={{ padding: '12px 14px 0' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 10,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: accent,
-              }}
-            />
-            <span
-              style={{
-                fontWeight: 600,
-                fontSize: 13,
-                color: 'var(--text)',
-                letterSpacing: '-0.005em',
-              }}
-            >
-              {title}
-            </span>
-            <span
-              style={{
-                fontSize: 11,
-                color: 'var(--text-muted)',
-                background: 'var(--surface-4)',
-                padding: '1px 7px',
-                borderRadius: 999,
-                fontWeight: 600,
-              }}
-            >
-              {tasks.length}
-            </span>
-          </div>
+      <div style={{ height: 3, background: accent }} />
+      <div style={{ padding: '12px 14px 8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span
+            style={{ width: 8, height: 8, borderRadius: '50%', background: accent }}
+          />
+          <span style={{ fontWeight: 600, fontSize: 13 }}>{title}</span>
+          <span
+            style={{
+              fontSize: 11,
+              color: 'var(--text-muted)',
+              background: 'var(--surface-3)',
+              padding: '1px 7px',
+              borderRadius: 999,
+              fontWeight: 600,
+            }}
+          >
+            {tasks.length}
+          </span>
         </div>
       </div>
+
       <div
         style={{
           flex: 1,
           position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
           padding: '0 10px 10px',
         }}
       >
@@ -98,12 +69,11 @@ export function Column({ status, title, tasks, labelsForTask, onTaskClick }: Pro
               ref={provided.innerRef}
               {...provided.droppableProps}
               style={{
-                flex: 1,
                 minHeight: 400,
-                background: snapshot.isDraggingOver ? 'var(--accent-bg)' : 'transparent',
-                borderRadius: 'var(--radius)',
+                background: snapshot.isDraggingOver ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                borderRadius: 6,
                 padding: 4,
-                transition: 'background 140ms ease',
+                transition: 'background 120ms',
               }}
             >
               {tasks.map((t, i) => (
@@ -128,7 +98,7 @@ export function Column({ status, title, tasks, labelsForTask, onTaskClick }: Pro
               right: 0,
               textAlign: 'center',
               fontSize: 12,
-              color: 'var(--text-faint)',
+              color: 'var(--text-muted)',
               pointerEvents: 'none',
             }}
           >

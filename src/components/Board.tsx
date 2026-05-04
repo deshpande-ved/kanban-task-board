@@ -1,5 +1,5 @@
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useLabels } from '../hooks/useLabels'
 import { useTasks } from '../hooks/useTasks'
 import type { Task, TaskPriority, TaskStatus } from '../types/database'
@@ -20,18 +20,7 @@ interface Props {
   userId: string
 }
 
-type ModalState =
-  | { kind: 'none' }
-  | { kind: 'create' }
-  | { kind: 'edit'; task: Task }
-  | { kind: 'labels' }
-
 export function Board({ userId }: Props) {
-  const tasksApi = useTasks(userId)
-  const labelsApi = useLabels(userId)
-  const [modal, setModal] = useState<ModalState>({ kind: 'none' })
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
-
   const {
     tasks,
     grouped,
@@ -41,7 +30,8 @@ export function Board({ userId }: Props) {
     updateTask,
     deleteTask,
     moveTask,
-  } = tasksApi
+  } = useTasks(userId)
+
   const {
     labels,
     taskLabels,
@@ -50,33 +40,43 @@ export function Board({ userId }: Props) {
     deleteLabel,
     setTaskLabelIds,
     labelsForTask,
-  } = labelsApi
+  } = useLabels(userId)
 
-  const filteredGrouped = useMemo(() => {
+  // Modal state — which modal is open, if any
+  const [showCreate, setShowCreate] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [showLabels, setShowLabels] = useState(false)
+
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
+
+  // Filter the grouped tasks based on the current filters
+  const filteredGrouped: typeof grouped = {
+    todo: filterTasks(grouped.todo),
+    in_progress: filterTasks(grouped.in_progress),
+    in_review: filterTasks(grouped.in_review),
+    done: filterTasks(grouped.done),
+  }
+
+  function filterTasks(list: Task[]): Task[] {
     const q = filters.query.trim().toLowerCase()
-    const matches = (task: Task) => {
-      if (
-        q &&
-        !task.title.toLowerCase().includes(q) &&
-        !task.description.toLowerCase().includes(q)
-      ) {
-        return false
+    return list.filter((task) => {
+      if (q) {
+        const matchesQuery =
+          task.title.toLowerCase().includes(q) || task.description.toLowerCase().includes(q)
+        if (!matchesQuery) return false
       }
       if (filters.priority !== 'all' && task.priority !== filters.priority) return false
       if (filters.labelIds.length > 0) {
-        const tlIds = new Set(
-          taskLabels.filter((tl) => tl.task_id === task.id).map((tl) => tl.label_id),
-        )
-        if (!filters.labelIds.every((id) => tlIds.has(id))) return false
+        const taskLabelIds = taskLabels
+          .filter((tl) => tl.task_id === task.id)
+          .map((tl) => tl.label_id)
+        for (const id of filters.labelIds) {
+          if (!taskLabelIds.includes(id)) return false
+        }
       }
       return true
-    }
-    const out: typeof grouped = { todo: [], in_progress: [], in_review: [], done: [] }
-    for (const status of Object.keys(grouped) as TaskStatus[]) {
-      out[status] = grouped[status].filter(matches)
-    }
-    return out
-  }, [grouped, filters, taskLabels])
+    })
+  }
 
   const filtersActive =
     filters.query !== '' || filters.priority !== 'all' || filters.labelIds.length > 0
@@ -90,7 +90,12 @@ export function Board({ userId }: Props) {
     if (filtersActive) return
     const { source, destination, draggableId } = result
     if (!destination) return
-    if (source.droppableId === destination.droppableId && source.index === destination.index) return
+    if (
+      source.droppableId === destination.droppableId &&
+      source.index === destination.index
+    ) {
+      return
+    }
     moveTask(
       draggableId,
       source.droppableId as TaskStatus,
@@ -100,7 +105,19 @@ export function Board({ userId }: Props) {
   }
 
   if (tasksLoading || labelsLoading) {
-    return <BoardSkeleton />
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--text-muted)',
+        }}
+      >
+        Loading...
+      </div>
+    )
   }
 
   return (
@@ -110,20 +127,19 @@ export function Board({ userId }: Props) {
         labels={labels}
         filters={filters}
         onFiltersChange={setFilters}
-        onManageLabels={() => setModal({ kind: 'labels' })}
+        onManageLabels={() => setShowLabels(true)}
       />
 
       <div className="main">
-        <header className="main-header">
-          <div style={{ flex: '1 1 280px', minWidth: 200, maxWidth: 480 }}>
-            <input
-              value={filters.query}
-              onChange={(e) => setFilters({ ...filters, query: e.target.value })}
-              placeholder="Search tasks…"
-              className="input"
-            />
-          </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="main-header">
+          <input
+            value={filters.query}
+            onChange={(e) => setFilters({ ...filters, query: e.target.value })}
+            placeholder="Search tasks..."
+            className="input"
+            style={{ flex: '1 1 280px', maxWidth: 480 }}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
             <select
               value={filters.priority}
               onChange={(e) =>
@@ -141,7 +157,7 @@ export function Board({ userId }: Props) {
               <button
                 type="button"
                 onClick={() => setFilters(EMPTY_FILTERS)}
-                className="btn btn-ghost"
+                className="btn btn-secondary"
               >
                 Clear
               </button>
@@ -149,12 +165,12 @@ export function Board({ userId }: Props) {
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => setModal({ kind: 'create' })}
+              onClick={() => setShowCreate(true)}
             >
               + New task
             </button>
           </div>
-        </header>
+        </div>
 
         <div className="main-content">
           {tasksError && (
@@ -163,13 +179,13 @@ export function Board({ userId }: Props) {
                 background: 'rgba(239, 68, 68, 0.12)',
                 color: '#fca5a5',
                 border: '1px solid rgba(239, 68, 68, 0.35)',
-                borderRadius: 'var(--radius)',
+                borderRadius: 6,
                 padding: '10px 14px',
                 marginBottom: 12,
                 fontSize: 13,
               }}
             >
-              {tasksError.message}
+              {tasksError}
             </div>
           )}
 
@@ -181,17 +197,20 @@ export function Board({ userId }: Props) {
                 marginBottom: 12,
                 background: 'var(--surface-2)',
                 border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
+                borderRadius: 6,
                 padding: '8px 12px',
               }}
             >
-              Showing {totalVisible} of {tasks.length} tasks · drag-and-drop is paused while
-              filters are active
+              Showing {totalVisible} of {tasks.length} tasks. Drag-and-drop is paused while
+              filters are active.
             </div>
           )}
 
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="board-row" style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
+            <div
+              className="board-row"
+              style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}
+            >
               {COLUMNS.map((c) => (
                 <Column
                   key={c.status}
@@ -199,7 +218,7 @@ export function Board({ userId }: Props) {
                   title={c.title}
                   tasks={filteredGrouped[c.status]}
                   labelsForTask={labelsForTask}
-                  onTaskClick={(task) => setModal({ kind: 'edit', task })}
+                  onTaskClick={(task) => setEditingTask(task)}
                 />
               ))}
             </div>
@@ -207,12 +226,12 @@ export function Board({ userId }: Props) {
         </div>
       </div>
 
-      {modal.kind === 'create' && (
+      {showCreate && (
         <TaskModal
           mode="create"
           labels={labels}
           initialLabelIds={[]}
-          onClose={() => setModal({ kind: 'none' })}
+          onClose={() => setShowCreate(false)}
           onSubmit={async (values) => {
             const created = await createTask({
               title: values.title,
@@ -221,84 +240,44 @@ export function Board({ userId }: Props) {
               due_date: values.due_date,
               status: values.status,
             })
-            if (created && values.labelIds.length) {
+            if (created && values.labelIds.length > 0) {
               await setTaskLabelIds(created.id, values.labelIds)
             }
           }}
         />
       )}
 
-      {modal.kind === 'edit' && (
+      {editingTask && (
         <TaskModal
           mode="edit"
-          task={modal.task}
+          task={editingTask}
           labels={labels}
-          initialLabelIds={labelsForTask(modal.task.id).map((l) => l.id)}
-          onClose={() => setModal({ kind: 'none' })}
+          initialLabelIds={labelsForTask(editingTask.id).map((l) => l.id)}
+          onClose={() => setEditingTask(null)}
           onSubmit={async (values) => {
-            await updateTask(modal.task.id, {
+            await updateTask(editingTask.id, {
               title: values.title,
               description: values.description,
               priority: values.priority,
               due_date: values.due_date,
               status: values.status,
             })
-            await setTaskLabelIds(modal.task.id, values.labelIds)
+            await setTaskLabelIds(editingTask.id, values.labelIds)
           }}
           onDelete={async () => {
-            await deleteTask(modal.task.id)
+            await deleteTask(editingTask.id)
           }}
         />
       )}
 
-      {modal.kind === 'labels' && (
+      {showLabels && (
         <LabelManager
           labels={labels}
           onCreate={createLabel}
           onDelete={deleteLabel}
-          onClose={() => setModal({ kind: 'none' })}
+          onClose={() => setShowLabels(false)}
         />
       )}
-    </div>
-  )
-}
-
-function BoardSkeleton() {
-  return (
-    <div className="shell">
-      <aside className="sidebar">
-        <div className="skeleton" style={{ width: 100, height: 26, marginBottom: 18 }} />
-        <div className="skeleton" style={{ height: 64, marginBottom: 12 }} />
-        <div className="skeleton" style={{ height: 64 }} />
-      </aside>
-      <div className="main">
-        <header className="main-header">
-          <div className="skeleton" style={{ width: 240, height: 32 }} />
-          <div className="skeleton" style={{ width: 100, height: 32 }} />
-        </header>
-        <div className="main-content">
-          <div style={{ display: 'flex', gap: 12 }}>
-            {[0, 1, 2, 3].map((i) => (
-              <div
-                key={i}
-                style={{
-                  flex: 1,
-                  minWidth: 240,
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-lg)',
-                  padding: 12,
-                  minHeight: 400,
-                }}
-              >
-                <div className="skeleton" style={{ width: 80, height: 14, marginBottom: 12 }} />
-                <div className="skeleton" style={{ height: 60, marginBottom: 8 }} />
-                <div className="skeleton" style={{ height: 60, marginBottom: 8 }} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

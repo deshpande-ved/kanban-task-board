@@ -25,7 +25,3 @@ export interface TaskLabel {
   task_id: string
   label_id: string
 }
-
-export type NewTask = Omit<Task, 'id' | 'user_id' | 'created_at'>
-export type TaskUpdate = Partial<Omit<Task, 'id' | 'user_id' | 'created_at'>>
-export type NewLabel = Omit<Label, 'id' | 'user_id' | 'created_at'>
