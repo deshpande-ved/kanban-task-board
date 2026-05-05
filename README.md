@@ -1,9 +1,8 @@
 # Kanban Task Board
 
-A Kanban board built for the Next Play Games SDE intern assessment. You can create tasks, drag them between columns (To Do / In Progress / In Review / Done), tag them with labels, set priorities and due dates, and search/filter the board.
+A Kanban task board. You can create tasks, drag them between columns (To Do / In Progress / In Review / Done), tag them with labels, set priorities and due dates, and search/filter the board.
 
 **Live demo:** https://kanban-task-board.pages.dev/
-**Repo:** https://github.com/deshpande-ved/kanban-task-board
 
 ## Features
 
@@ -51,52 +50,6 @@ Three tables, all with row-level security so users only see their own data.
 - `task_labels` — task_id, label_id (composite primary key)
 
 Status is constrained to `todo | in_progress | in_review | done`. Priority is `low | normal | high`. The `user_id` defaults to `auth.uid()` so the current signed-in user is automatically the owner.
-
-```sql
-CREATE TABLE tasks (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'todo'
-    CHECK (status IN ('todo', 'in_progress', 'in_review', 'done')),
-  priority TEXT DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high')),
-  due_date DATE,
-  position INTEGER NOT NULL DEFAULT 0,
-  user_id UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE labels (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  color TEXT NOT NULL DEFAULT '#6B7280',
-  user_id UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE task_labels (
-  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  label_id UUID NOT NULL REFERENCES labels(id) ON DELETE CASCADE,
-  PRIMARY KEY (task_id, label_id)
-);
-
-ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own tasks" ON tasks
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
-ALTER TABLE labels ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own labels" ON labels
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
-ALTER TABLE task_labels ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own task_labels" ON task_labels
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM tasks WHERE tasks.id = task_labels.task_id AND tasks.user_id = auth.uid())
-  )
-  WITH CHECK (
-    EXISTS (SELECT 1 FROM tasks WHERE tasks.id = task_labels.task_id AND tasks.user_id = auth.uid())
-  );
-```
 
 ## Project layout
 
