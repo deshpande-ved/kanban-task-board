@@ -60,6 +60,7 @@ export function useTasks(userId: string | undefined) {
         priority: input.priority || 'normal',
         due_date: input.due_date || null,
         position: nextPosition,
+        user_id: userId,
       })
       .select()
       .single()

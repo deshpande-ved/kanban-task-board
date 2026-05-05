@@ -3,6 +3,7 @@ import type { Label, Task } from '../types/database'
 import type { Filters } from './SearchBar'
 
 interface Props {
+  userId: string
   tasks: Task[]
   labels: Label[]
   filters: Filters
@@ -10,7 +11,7 @@ interface Props {
   onManageLabels: () => void
 }
 
-export function Sidebar({ tasks, labels, filters, onFiltersChange, onManageLabels }: Props) {
+export function Sidebar({ userId, tasks, labels, filters, onFiltersChange, onManageLabels }: Props) {
   // Stat counts
   const total = tasks.length
   const inReview = tasks.filter(
@@ -35,6 +36,9 @@ export function Sidebar({ tasks, labels, filters, onFiltersChange, onManageLabel
         <div style={{ fontSize: 16, fontWeight: 600 }}>Kanban</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
           Personal board
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, fontFamily: 'monospace' }}>
+          user: {userId.slice(0, 8)}
         </div>
       </div>
 

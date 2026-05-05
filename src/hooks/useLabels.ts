@@ -27,7 +27,7 @@ export function useLabels(userId: string | undefined) {
   async function createLabel(name: string, color: string) {
     const { data, error } = await supabase
       .from('labels')
-      .insert({ name, color })
+      .insert({ name, color, user_id: userId })
       .select()
       .single()
     if (error) return null

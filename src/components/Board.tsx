@@ -123,6 +123,7 @@ export function Board({ userId }: Props) {
   return (
     <div className="shell">
       <Sidebar
+        userId={userId}
         tasks={tasks}
         labels={labels}
         filters={filters}
